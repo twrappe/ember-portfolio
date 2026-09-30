@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EMBER PM">
+<title>EMBER Evening</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg: #0a0a0a; --surface: #111111; --surface2: #181818; --border: #222222;
+    --accent: #e85d26; --accent-dim: rgba(232,93,38,0.12);
+    --text: #e8e4dc; --text-muted: #666; --text-dim: #444;
+    --success: #2a9d5c; --radius: 12px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; min-height: 100dvh; padding: 0 0 calc(80px + var(--safe-bottom)) 0; }
+  header { position: sticky; top: 0; z-index: 10; background: rgba(10,10,10,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; }
+  .logo { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 0.2em; color: var(--accent); }
+  .session-tag { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; }
+  .sections { padding: 20px 16px; display: flex; flex-direction: column; gap: 28px; }
+  .section-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .question { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .question:last-child { border-bottom: none; }
+  .q-label { font-size: 13px; font-weight: 400; color: var(--text); margin-bottom: 10px; line-height: 1.4; }
+  .scale-row { display: flex; gap: 6px; }
+  .scale-btn { flex: 1; height: 36px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 13px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+  .scale-btn.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .scale-hints { display: flex; justify-content: space-between; margin-top: 6px; padding: 0 2px; }
+  .scale-hint { font-size: 10px; color: var(--text-dim); font-family: 'DM Mono', monospace; }
+  .yn-row { display: flex; gap: 8px; }
+  .yn-btn { flex: 1; height: 36px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.05em; cursor: pointer; transition: all 0.15s; }
+  .yn-btn.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .select-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sel-btn { padding: 7px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .sel-btn.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .class-grid { display: flex; flex-direction: column; gap: 6px; }
+  .class-btn { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; text-align: left; }
+  .class-btn.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 300; padding: 12px; resize: none; min-height: 80px; outline: none; transition: border-color 0.15s; }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text-dim); }
+  .submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px calc(12px + var(--safe-bottom)); background: rgba(10,10,10,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--border); }
+  .submit-btn { width: 100%; height: 50px; background: var(--accent); border: none; border-radius: var(--radius); color: #fff; font-family: 'DM Mono', monospace; font-size: 13px; letter-spacing: 0.1em; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+  .submit-btn:active { opacity: 0.8; }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--success); color: #fff; font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.05em; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; z-index: 100; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">EMBER</span>
+  <span class="session-tag" id="header-date"></span>
+</header>
+<div class="sections">
+  <div>
+    <div class="section-label">Energy & Activity</div>
+    <div class="card">
+      <div class="question">
+        <div class="q-label">Overall energy level today</div>
+        <div class="scale-row" id="energy"></div>
+        <div class="scale-hints"><span class="scale-hint">very low</span><span class="scale-hint">very high</span></div>
+      </div>
+      <div class="question">
+        <div class="q-label">Started new projects or had an unusual number of ideas?</div>
+        <div class="yn-row" id="new_projects"></div>
+      </div>
+      <div class="question">
+        <div class="q-label">Did everything feel effortful today?</div>
+        <div class="yn-row" id="effortful"></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="section-label">Cognition</div>
+    <div class="card">
+      <div class="question">
+        <div class="q-label">Concentration today</div>
+        <div class="scale-row" id="concentration"></div>
+        <div class="scale-hints"><span class="scale-hint">very poor</span><span class="scale-hint">sharp</span></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="section-label">Mood & Behavior</div>
+    <div class="card">
+      <div class="question">
+        <div class="q-label">Overall mood today</div>
+        <div class="scale-row" id="mood"></div>
+        <div class="scale-hints"><span class="scale-hint">very low</span><span class="scale-hint">very elevated</span></div>
+      </div>
+      <div class="question">
+        <div class="q-label">More irritable than usual?</div>
+        <div class="yn-row" id="irritable"></div>
+      </div>
+      <div class="question">
+        <div class="q-label">Made any impulsive decisions?</div>
+        <div class="yn-row" id="impulsive"></div>
+      </div>
+      <div class="question">
+        <div class="q-label">Socially withdrew today?</div>
+        <div class="yn-row" id="withdrew"></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="section-label">Confounders</div>
+    <div class="card">
+      <div class="question">
+        <div class="q-label">Alcohol today?</div>
+        <div class="select-row" id="alcohol"></div>
+      </div>
+      <div class="question">
+        <div class="q-label">Illness or physical stress?</div>
+        <div class="yn-row" id="illness"></div>
+      </div>
+      <div class="question">
+        <div class="q-label">Travel or major schedule disruption?</div>
+        <div class="yn-row" id="travel"></div>
+      </div>
+      <div class="question">
+        <div class="q-label">Unusually high life stress?</div>
+        <div class="yn-row" id="life_stress"></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="section-label">Overall</div>
+    <div class="card">
+      <div class="question">
+        <div class="q-label">How would you classify today?</div>
+        <div class="class-grid" id="classification_day"></div>
+      </div>
+      <div class="question">
+        <div class="q-label">Anything notable to flag? <span style="color:var(--text-dim);font-size:11px">(optional)</span></div>
+        <textarea id="notes" placeholder="free text..."></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="submit-bar">
+  <button class="submit-btn" id="submit-btn" onclick="submitForm()">LOG EVENING</button>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const state = {};
+document.getElementById('header-date').textContent =
+  new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toLowerCase() + ' · evening';
+
+function buildScale(id) {
+  const el = document.getElementById(id);
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'scale-btn'; btn.textContent = i;
+    btn.onclick = () => { el.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); state[id] = i; };
+    el.appendChild(btn);
+  }
+}
+function buildYN(id) {
+  const el = document.getElementById(id);
+  ['Yes','No'].forEach(val => {
+    const btn = document.createElement('button');
+    btn.className = 'yn-btn'; btn.textContent = val;
+    btn.onclick = () => { el.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); state[id] = val; };
+    el.appendChild(btn);
+  });
+}
+function buildSelect(id, options) {
+  const el = document.getElementById(id);
+  options.forEach(val => {
+    const btn = document.createElement('button');
+    btn.className = 'sel-btn'; btn.textContent = val;
+    btn.onclick = () => { el.querySelectorAll('.sel-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); state[id] = val; };
+    el.appendChild(btn);
+  });
+}
+function buildClass(id, options) {
+  const el = document.getElementById(id);
+  options.forEach(val => {
+    const btn = document.createElement('button');
+    btn.className = 'class-btn'; btn.textContent = val;
+    btn.onclick = () => { el.querySelectorAll('.class-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); state[id] = val; };
+    el.appendChild(btn);
+  });
+}
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(() => t.className = 'toast', 2800);
+}
+async function submitForm() {
+  const required = ['energy','new_projects','effortful','concentration','mood','irritable','impulsive','withdrew','alcohol','illness','travel','life_stress','classification_day'];
+  for (const key of required) {
+    if (state[key] === undefined) { showToast(`missing: ${key.replace(/_/g,' ')}`, true); return; }
+  }
+  const payload = { ...state, notes: document.getElementById('notes').value };
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'LOGGING...';
+  try {
+    const res = await fetch('/submit/evening', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (res.ok) { showToast('logged ✓'); btn.textContent = 'LOGGED ✓'; }
+    else { showToast(data.message || 'error', true); btn.disabled = false; btn.textContent = 'LOG EVENING'; }
+  } catch(e) { showToast('server unreachable', true); btn.disabled = false; btn.textContent = 'LOG EVENING'; }
+}
+buildScale('energy');
+buildYN('new_projects');
+buildYN('effortful');
+buildScale('concentration');
+buildScale('mood');
+buildYN('irritable');
+buildYN('impulsive');
+buildYN('withdrew');
+buildSelect('alcohol', ['None','1 drink','2 drinks','3+']);
+buildYN('illness');
+buildYN('travel');
+buildYN('life_stress');
+buildClass('classification_day', ['Euthymic','Mildly elevated','Elevated','Mildly depressed','Depressed']);
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "version": "2026-08-18",
+  "source": "data/golden_set_ml_consolidated.csv",
+  "thresholds": {
+    "max_rate_drift": 0.05
+  },
+  "expected": {
+    "total_rows": 5,
+    "source_real_rows": 2,
+    "source_mock_rows": 3,
+    "rates": {
+      "has_readiness": 1.0,
+      "has_sleep": 0.6,
+      "has_deviation": 1.0
+    },
+    "tag_rates": {
+      "tag_travel_day": 0.2,
+      "tag_unworn_or_partial_wear_day": 0.2,
+      "tag_missing_readiness_contributors": 0.2,
+      "tag_missing_sleep_contributors": 0.2,
+      "tag_api_gap_day_partial_sync": 0.2,
+      "tag_high_deviation_night": 0.2,
+      "tag_normal_recovery_night": 0.2
+    }
+  }
+}

@@ -1,0 +1,366 @@
+name: ML Golden Set Tests
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 13 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  latest-stable-compatibility:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install baseline dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          cd frontend
+          npm ci
+
+      - name: Upgrade Python direct dependencies to latest stable
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          python - <<'PY' > artifacts/python-direct-deps.txt
+          import re
+
+          names = []
+          with open("requirements.txt", encoding="utf-8") as handle:
+              for raw in handle:
+                  line = raw.strip()
+                  if not line or line.startswith("#"):
+                      continue
+                  name = re.split(r"[<>=!~\[]", line, maxsplit=1)[0].strip()
+                  if name:
+                      names.append(name)
+
+          print("\n".join(names))
+          PY
+          xargs -a artifacts/python-direct-deps.txt -r pip install --upgrade
+          pip freeze > artifacts/python-freeze-latest.txt
+
+      - name: Upgrade frontend direct dependencies to latest stable
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          cd frontend
+          LATEST_PACKAGES=$(node -e "const pkg=require('./package.json'); const names=[...Object.keys(pkg.dependencies||{}), ...Object.keys(pkg.devDependencies||{})]; console.log(names.map(n=>n+'@latest').join(' '));")
+          npm install --no-save $LATEST_PACKAGES
+          npm ls --depth=0 > ../artifacts/npm-tree-latest.txt
+
+      - name: Run smoke tests against latest stable dependencies
+        shell: bash
+        run: |
+          pytest tests/ml -q
+          cd frontend
+          npm run build
+          npx playwright install --with-deps chromium
+          npx playwright test tests/e2e/web_prototype.spec.ts
+
+      - name: Upload latest-stable compatibility artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-stable-compatibility-report
+          path: |
+            artifacts/python-direct-deps.txt
+            artifacts/python-freeze-latest.txt
+            artifacts/npm-tree-latest.txt
+            frontend/playwright-report
+            frontend/test-results
+
+  ml-golden-set:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run ML golden set tests
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          pytest tests/ml -q -s --junitxml=artifacts/ml-golden-set.xml 2>&1 | tee artifacts/ml-golden-set.log
+
+      - name: Upload ML golden set report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-golden-set-report
+          path: |
+            artifacts/ml-golden-set.xml
+            artifacts/ml-golden-set.log
+
+  data-validation-suite:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run data validation suite (Test Design Doc A)
+        run: |
+          mkdir -p artifacts
+          pytest tests/data_validation -q -rX --junitxml=artifacts/data-validation.xml
+
+      - name: Upload data-validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-validation-report
+          path: artifacts/data-validation.xml
+
+  scheduled-ingest-validation:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Require Oura secrets for scheduled ingest
+        env:
+          OURA_CLIENT_ID: ${{ secrets.OURA_CLIENT_ID }}
+          OURA_CLIENT_SECRET: ${{ secrets.OURA_CLIENT_SECRET }}
+          OURA_REDIRECT_URI: ${{ secrets.OURA_REDIRECT_URI }}
+          OURA_ACCESS_TOKEN: ${{ secrets.OURA_ACCESS_TOKEN }}
+          OURA_REFRESH_TOKEN: ${{ secrets.OURA_REFRESH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          test -n "$OURA_CLIENT_ID"
+          test -n "$OURA_CLIENT_SECRET"
+          test -n "$OURA_REDIRECT_URI"
+          test -n "$OURA_ACCESS_TOKEN"
+          test -n "$OURA_REFRESH_TOKEN"
+          test -n "$ANTHROPIC_API_KEY"
+
+      - name: Scheduled ingest run
+        env:
+          OURA_CLIENT_ID: ${{ secrets.OURA_CLIENT_ID }}
+          OURA_CLIENT_SECRET: ${{ secrets.OURA_CLIENT_SECRET }}
+          OURA_REDIRECT_URI: ${{ secrets.OURA_REDIRECT_URI }}
+          OURA_ACCESS_TOKEN: ${{ secrets.OURA_ACCESS_TOKEN }}
+          OURA_REFRESH_TOKEN: ${{ secrets.OURA_REFRESH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python pull_data.py
+
+      - name: Emit scheduled analytics canary
+        run: python analytics.py
+
+      - name: Validate data contracts after ingest
+        run: |
+          mkdir -p artifacts
+          pytest tests/data_validation -q -rX --junitxml=artifacts/scheduled-data-validation.xml
+
+      - name: Validate analytics contracts after ingest
+        run: |
+          mkdir -p artifacts
+          pytest tests/analytics -q --junitxml=artifacts/scheduled-analytics-validation.xml
+
+      - name: Generate scheduled analytics HTML report
+        run: python analytics.py --report artifacts/scheduled-analytics-report.html
+
+      - name: Upload scheduled validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scheduled-data-validation-report
+          path: artifacts/scheduled-data-validation.xml
+
+      - name: Upload scheduled analytics report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scheduled-analytics-validation-report
+          path: |
+            artifacts/scheduled-analytics-validation.xml
+            artifacts/scheduled-analytics-report.html
+
+  analytics-instrumentation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run analytics schema + invariant tests
+        run: |
+          mkdir -p artifacts
+          pytest tests/analytics -q --junitxml=artifacts/analytics-validation.xml
+
+      - name: Run analytics green gate
+        run: |
+          python analytics.py --green-gate
+
+      - name: Generate analytics HTML report
+        if: always()
+        run: python analytics.py --report artifacts/analytics-report.html --sink data/analytics_green_gate.jsonl
+
+      - name: Upload analytics report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analytics-validation-report
+          path: |
+            artifacts/analytics-validation.xml
+            artifacts/analytics-report.html
+
+  model-version-contract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run model manifest + app compatibility contract tests
+        run: |
+          mkdir -p artifacts
+          pytest tests/data_validation/test_r14_model_app_compatibility.py -q --junitxml=artifacts/model-version-contract.xml
+
+      - name: Upload model contract report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-version-contract-report
+          path: artifacts/model-version-contract.xml
+
+  fault-injection-suite:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run fault injection catalog tests
+        env:
+          FAULT_INJECTION_REPORT_PATH: artifacts/fault-injection-report.md
+          FAULT_INJECTION_REPORT_JSON_PATH: artifacts/fault-injection-report.json
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          pytest tests/data_validation/test_fault_injection_catalog.py -q -s --junitxml=artifacts/fault-injection.xml 2>&1 | tee artifacts/fault-injection.log
+
+      - name: Upload fault injection report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fault-injection-report
+          path: |
+            artifacts/fault-injection.xml
+            artifacts/fault-injection.log
+            artifacts/fault-injection-report.md
+            artifacts/fault-injection-report.json
+
+  web-prototype-ui:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run web prototype UI test
+        working-directory: frontend
+        run: npx playwright test tests/e2e/web_prototype.spec.ts
+
+      - name: Upload web prototype UI report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-prototype-ui-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results

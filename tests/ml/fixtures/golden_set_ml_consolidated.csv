@@ -1,0 +1,6 @@
+source_set,case_id,day,categories,tag_travel_day,tag_unworn_or_partial_wear_day,tag_missing_readiness_contributors,tag_missing_sleep_contributors,tag_api_gap_day_partial_sync,tag_high_deviation_night,tag_normal_recovery_night,has_readiness,has_sleep,has_deviation
+real,real_2026_07_20,2026-07-20,normal_recovery_night,0,0,0,0,0,0,1,1,1,1
+real,real_2026_07_21,2026-07-21,travel_day,1,0,0,0,0,0,0,1,1,1
+mock,mock_2026_07_24,2026-07-24,api_gap_day_partial_sync,0,0,0,0,1,0,0,1,0,1
+mock,mock_2026_07_25,2026-07-25,missing_sleep_contributors,0,0,0,1,0,0,0,1,0,1
+mock,mock_2026_07_27,2026-07-27,high_deviation_night,0,1,1,0,0,1,0,1,1,1

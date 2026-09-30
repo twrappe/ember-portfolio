@@ -1,0 +1,9 @@
+day,score,temperature_deviation,contributors
+2026-07-05,80,0.10,"{'hrv_balance': 65, 'resting_heart_rate': 55, 'recovery_index': 72, 'previous_night': 75, 'sleep_balance': 70}"
+2026-07-06,78,0.20,"{'hrv_balance': 63, 'resting_heart_rate': 56, 'recovery_index': 71, 'previous_night': 74, 'sleep_balance': 69}"
+2026-07-07,82,-0.10,"{'hrv_balance': 67, 'resting_heart_rate': 54, 'recovery_index': 73, 'previous_night': 76, 'sleep_balance': 71}"
+2026-07-08,79,0.00,"{'hrv_balance': 66, 'resting_heart_rate': 55, 'recovery_index': 72, 'previous_night': 75, 'sleep_balance': 70}"
+2026-07-09,77,0.30,"{'hrv_balance': 62, 'resting_heart_rate': 57, 'recovery_index': 70, 'previous_night': 73, 'sleep_balance': 68}"
+2026-07-10,76,0.25,"{'hrv_balance': 61, 'resting_heart_rate': 58, 'recovery_index': 69, 'previous_night': 72, 'sleep_balance': 67}"
+2026-07-11,75,-0.20,"{'hrv_balance': 60, 'resting_heart_rate': 59, 'recovery_index': 68, 'previous_night': 71, 'sleep_balance': 66}"
+2026-07-12,74,0.15,"{'hrv_balance': 59, 'resting_heart_rate': 60, 'recovery_index': 67, 'previous_night': 70, 'sleep_balance': 65}"

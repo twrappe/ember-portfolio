@@ -1,0 +1,10 @@
+.env
+data
+logs
+__pycache__
+venv
+models/
+export_onnx.py
+generate_golden_labels.ps1
+build_ml_golden_set.ps1
+artifacts/
